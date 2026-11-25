@@ -84,11 +84,11 @@ footer{border-top:1px solid var(--line);padding:22px 0;color:var(--muted);font-s
    @if(!empty($it['description']))<small>{{ $it['description'] }}</small>@endif</li>@endforeach</ul></div></section>
 @endif
 
-@if(count($imgs) > 0)
-<section class="blk"><div class="wrap"><h2>Gallery</h2><div class="gallery">@foreach($imgs as $img)<img src="{{ $img }}" alt="{{ $p->business_name }}" loading="lazy">@endforeach</div></div></section>
+@if(count($imgs) > 2)
+<section class="blk"><div class="wrap"><h2>Gallery</h2><div class="gallery">@foreach(array_slice($imgs, 1) as $img)<img src="{{ $img }}" alt="{{ $p->business_name }}" loading="lazy">@endforeach</div></div></section>
 @endif
 
-<section id="contact" class="blk tint"><div class="wrap"><h2>Visit or get in touch</h2><div class="contact">
+<section id="contact" class="blk {{ empty($svc['items']) ? 'tint' : '' }}" style="border-top:1px solid var(--line)"><div class="wrap"><h2>Visit or get in touch</h2><div class="contact">
  @if(!empty($c['address']))<div><h3>Address</h3><p>{{ $c['address'] }}</p>@if($maps)<p><a href="{{ $maps }}" target="_blank" rel="noopener">Open in Maps</a></p>@endif</div>@endif
  @if(!empty($c['hours']))<div><h3>Hours</h3><p>{{ $c['hours'] }}</p></div>@endif
  <div><h3>Contact</h3>

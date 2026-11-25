@@ -31,7 +31,7 @@ class SiteGenerator
         $c = $s->content;
         if ($s->type === 'hero') { $c['headline'] = $copy['hero']['headline']; $c['subheadline'] = $copy['hero']['subheadline'] ?? ''; }
         if ($s->type === 'about') { $c['body'] = $copy['about']['body']; }
-        if ($s->type === 'services') foreach ($c['items'] as $i => $it) $c['items'][$i]['description'] = $copy['services'][$i]['description'] ?? $it['description'];
+        if ($s->type === 'services') foreach ($c['items'] as $i => $it) $c['items'][$i]['description'] = $this->cleanDesc($copy['services'][$i]['description'] ?? '', $it['name']);
         $s->update(['content' => $c]);
     }
 
@@ -55,11 +55,12 @@ class SiteGenerator
         $names = array_map(fn ($s, $i) => ['index' => $i, 'name' => $s['name']], $f['services'], array_keys($f['services']));
         $facts = json_encode(['name' => $f['name'], 'city' => $f['city'], 'about' => $f['about'], 'hours' => $f['hours'], 'services' => $names], JSON_UNESCAPED_UNICODE);
         $extra = $instruction ? "\nOwner's style request (tone/wording only, never new facts): " . mb_substr($instruction, 0, 300) : '';
-        $prompt = "VERIFIED FACTS:\n$facts\n$extra\n\nWrite website copy as JSON: "
+         $prompt = "VERIFIED FACTS:\n$facts\n$extra\n\nWrite website copy as JSON: "
             . '{"hero":{"headline":"","subheadline":""},"about":{"body":""},"services":[{"index":0,"description":""}]}' . "\n"
             . "Rules: use ONLY the verified facts. No invented claims: no years in business, awards, numbers, prices, guarantees, reviews, staff names, contact details or URLs. "
-            . "Service descriptions: one appetising sentence of 8 to 16 words that uses ONLY the ingredients, flavours and dietary words that already appear in that service's name or in the verified 'about' text (for example vegan, gluten-free, almond, chocolate). "
-            . "Do not repeat the service name word for word, and never add anything that is not in the facts (no 'fresh', 'handmade', 'bestseller', awards, sizes or digits). If the name tells you nothing more, write a short plain sentence. "
+            . "Service descriptions: only describe an item with words that appear in its own name (for example its ingredients or flavours). "
+            . "Do NOT apply facts about the whole business (such as its history or baking style) to a single item. "
+            . "If the name alone gives nothing to say, return an empty string for that description. Never repeat the name word for word. "
             . "If there is no 'about' fact keep the about body short and generic. Friendly, plain tone.";
 
         for ($try = 0; $try < 2; $try++) {
@@ -86,12 +87,19 @@ class SiteGenerator
         if ($f['services']) {
             $desc = collect($copy['services'] ?? [])->keyBy('index');
             $out['services'] = ['title' => 'Our services', 'items' => array_map(fn ($s, $i) => [
-                'name' => $s['name'], 'description' => $desc[$i]['description'] ?? '', 'price' => $s['price']], $f['services'], array_keys($f['services']))];
+                'name' => $s['name'], 'description' => $this->cleanDesc($desc[$i]['description'] ?? '', $s['name']), 'price' => $s['price']], $f['services'], array_keys($f['services']))];
         }
         $imgs = $p->sources()->where('type', 'image')->pluck('content')->map(fn ($path) => Storage::url($path))->all();
         if ($imgs) $out['gallery'] = ['images' => $imgs];
         // Contact comes straight from confirmed facts, never from the AI.
         $out['contact'] = array_filter(['phone' => $f['phone'], 'email' => $f['email'], 'address' => $f['address'], 'hours' => $f['hours'], 'website' => $f['website'], 'socials' => $f['socials']]);
         return $out;
+    }
+    private function cleanDesc(string $desc, string $name): string
+    {
+        $words = fn ($s) => array_filter(preg_split('/\W+/u', mb_strtolower($s)));
+        $stop = ['a', 'an', 'the', 'with', 'made', 'and', 'of', 'in', 'our', 'is', 'are', 'to', 'for', 'by', 'from', 'served', 'this', 'that'];
+        $extra = array_diff($words($desc), $words($name), $stop);
+        return count($extra) === 0 ? '' : trim($desc);
     }
 }

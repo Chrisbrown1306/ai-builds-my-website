@@ -76,7 +76,7 @@ class SourceIngestor
         if (!$r->ok() || strlen($text) < 200) {
             return $this->fail($p, $type, $label, 'blocked', 'Page blocked us or has no readable content. Please paste the text instead.');
         }
-        return $this->store($p, $type, $label, mb_substr($text, 0, 20000));
+                return $this->store($p, $type, $label, mb_substr($text, 0, 60000));
     }
 
     /** Web search: Gemini + Google Search grounding when enabled, otherwise a keyless DuckDuckGo lookup. */
@@ -96,6 +96,8 @@ class SourceIngestor
         }
         $urls = $this->duckSearch($p);
         if (!$urls) {
+            $osm = $this->osmSearch($p);
+            if ($osm) return $this->store($p, 'web', 'OpenStreetMap search', $osm);
             return $this->fail($p, 'web', 'Web search', 'failed', 'No web results (search unavailable). Using your links and pasted text instead.');
         }
         $last = null;
@@ -157,5 +159,26 @@ class SourceIngestor
     private function fail(Project $p, string $type, string $label, string $status, string $note): Source
     {
         return $p->sources()->create(['type' => $type, 'label' => $label, 'status' => $status, 'note' => $note]);
+    }
+      private function osmSearch(Project $p): ?string
+    {
+        try {
+            $r = Http::timeout(10)->withUserAgent('AIBuildsMyWebsite/1.0 (internship assignment)')
+                ->get('https://nominatim.openstreetmap.org/search', [
+                    'q' => trim($p->business_name . ' ' . $p->city), 'format' => 'jsonv2',
+                    'extratags' => 1, 'limit' => 3, 'countrycodes' => 'in']);
+        } catch (\Throwable $e) { return null; }
+        $rows = $r->ok() ? $r->json() : null;
+        if (!is_array($rows) || !count($rows)) return null;
+
+        $lines = [];
+        foreach ($rows as $i => $m) {
+            $x = $m['extratags'] ?? [];
+            $lines[] = 'Match ' . ($i + 1) . ': ' . ($m['name'] ?? '') . ' | address: ' . ($m['display_name'] ?? '')
+                . (isset($x['phone']) ? ' | phone: ' . $x['phone'] : '')
+                . (isset($x['opening_hours']) ? ' | hours: ' . $x['opening_hours'] : '')
+                . (isset($x['website']) ? ' | website: ' . $x['website'] : '');
+        }
+        return "OpenStreetMap results for the business name:\n" . implode("\n", $lines);
     }
 }
