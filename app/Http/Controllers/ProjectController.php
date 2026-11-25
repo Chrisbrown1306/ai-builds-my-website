@@ -108,9 +108,15 @@ class ProjectController extends Controller
         return back()->with('ok', 'Published at ' . route('site', $slug));
     }
 
-    public function site(string $slug)
+        public function site(string $slug)
     {
         $p = Project::where('slug', $slug)->where('status', 'published')->with('sections')->firstOrFail();
         return view('site', ['p' => $p]);
+    }
+
+    public function preview(Project $project)
+    {
+        abort_if($project->sections()->doesntExist(), 404);
+        return view('site', ['p' => $project->load('sections')]);
     }
 }

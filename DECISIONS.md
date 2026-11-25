@@ -19,6 +19,8 @@
   prompt and on owner review before publishing.
 - Very long service lists (40+) make the AI call slow; the owner trims them in the fact review step.
 - Link fetching blocks private IPs on the first hop only (redirects are not re-checked).
+- The keyless DuckDuckGo search parses their HTML and may break if it changes; results are only ever untrusted sources that go through the same fact review.
+- Hosting: the app runs locally; "publish" creates a public page at /s/{slug}. Cloud deployment was cut for time.
 
 ## What I cut
 - Accounts and auth, custom domains, SEO metadata, themes.

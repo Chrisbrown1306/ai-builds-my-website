@@ -46,4 +46,19 @@ class GeminiClient
         if (!is_array($data)) throw new AiUnavailable('AI returned invalid JSON.');
         return $data;
     }
+    public function vision(string $prompt, string $path, string $mime): string
+    {
+        $key = config('services.gemini.key');
+        if (!$key) throw new AiUnavailable('GEMINI_API_KEY is not configured.');
+        $body = ['contents' => [['parts' => [['text' => $prompt],
+                    ['inline_data' => ['mime_type' => $mime, 'data' => base64_encode(file_get_contents($path))]]]]],
+                 'generationConfig' => ['temperature' => 0]];
+        $m = config('services.gemini.model');
+        try {
+            $res = Http::withHeaders(['x-goog-api-key' => $key])->timeout(30)
+                ->post("https://generativelanguage.googleapis.com/v1beta/models/{$m}:generateContent", $body);
+        } catch (\Throwable $e) { throw new AiUnavailable('network error'); }
+        if (!$res->successful()) throw new AiUnavailable('HTTP ' . $res->status());
+        return collect($res->json('candidates.0.content.parts', []))->pluck('text')->implode('');
+    }
 }

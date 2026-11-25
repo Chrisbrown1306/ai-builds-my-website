@@ -41,6 +41,9 @@ The private project URL (random UUID) is the owner's access link. The published 
 | Instructions hidden in uploaded files | Instruction-like lines are stripped and flagged; the rest is wrapped as untrusted data |
 | AI down, busy or over quota | Retries on a fallback model; if still failing, a plain site is built from confirmed facts without AI |
 
+Web search: Gemini + Google Search grounding when enabled; otherwise a keyless DuckDuckGo lookup whose top results are read as sources.
+Photos: text on menus, price lists and signboards is read with Gemini vision (best effort).
+
 ## Configuration (.env)
 `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_FALLBACK_MODEL`, `GEMINI_SEARCH` (true/false, Google Search grounding; off by default
 because free keys hit quota). No keys are stored in the repo.

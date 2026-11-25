@@ -69,19 +69,10 @@ class SiteGenerator
         throw new AiUnavailable('AI copy contained unverified details.');
     }
 
-    /** Post-check: no URLs/emails, and every number in the copy must exist in the verified facts. */
     private function allSafe(array $c, string $blob): bool
     {
-        $texts = [$c['hero']['headline'] ?? '', $c['hero']['subheadline'] ?? '', $c['about']['body'] ?? ''];
-        foreach ($c['services'] ?? [] as $s) { $texts[] = $s['description'] ?? ''; }
-        foreach ($texts as $t) {
-            if (preg_match('/@|https?:|www\./i', $t)) return false;
-            preg_match_all('/\d+/', $t, $m);
-            foreach ($m[0] as $d) if (!str_contains($blob, $d)) return false;
-        }
-        return trim($texts[0]) !== '';
+        return \App\Support\CopyValidator::isSafe($c, $blob);
     }
-
     private function fallback(array $f): array
     {
         return ['hero' => ['headline' => $f['name'], 'subheadline' => $f['city'] ? 'Serving ' . $f['city'] : ''],
